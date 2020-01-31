@@ -183,6 +183,9 @@ class AnyMapImage
 		}
 		return accumulator[0..$-2] ~ "]";
 	}
+
+	alias width = getWidth;
+	alias height = getHeight;
 }
 
 
@@ -207,6 +210,10 @@ abstract class ImageFile
 	abstract void load(string filename);
 	abstract void save(string filename);	
 
+	final AnyMapImage image() 
+	{ 
+		return _image; 
+	}
 }
 
 class P6Image : ImageFile
@@ -290,5 +297,5 @@ class P6Image : ImageFile
 	    }		
 	}
 
-	alias _image this;
+	alias image this;
 }  
