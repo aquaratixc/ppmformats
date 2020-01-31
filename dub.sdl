@@ -3,4 +3,10 @@ description "Minimal library for Netpbm image formats"
 authors "Oleg Bakharev (aquaratixc), LightHouse Software"
 copyright "Copyright © 2020, Oleg Bakharev"
 license "ESL 1.0"
+<<<<<<< HEAD
 target "library"
+=======
+targetName "ppmformats"
+sourcePath "ppmformats"
+importPaths "."
+>>>>>>> 7533b6ccf53adf6d668f6d1c2867be6dfba9a1e8
