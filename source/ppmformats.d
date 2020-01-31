@@ -1,3 +1,4 @@
+module ppmformats;
 
 private
 {
