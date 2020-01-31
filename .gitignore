@@ -1,0 +1,15 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/ppmformats
+ppmformats.so
+ppmformats.dylib
+ppmformats.dll
+ppmformats.a
+ppmformats.lib
+ppmformats-test-*
+*.exe
+*.o
+*.obj
+*.lst
