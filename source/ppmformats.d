@@ -2,6 +2,10 @@ module ppmformats;
 
 private
 {
+	import std.conv;
+	import std.stdio;
+	import std.string;
+	
 	template addProperty(T, string propertyName)
 	{
 		import std.string : format, toLower;
@@ -68,7 +72,7 @@ class RGBColor
 		return format("RGBColor(%d, %d, %d, I = %f)", _r, _g, _b, this.luminance);
 	}
 
-	RGBColor opBinary(string op, T)(T rhs)
+	RGBColor opBinary(string op, T)(auto ref T rhs)
 	{
 		import std.algorithm : clamp;
 		import std.string : format;
@@ -103,7 +107,7 @@ class RGBColor
 	}
 }
 
-class AnyMapImage
+class PixMapImage
 {
 	mixin(addProperty!(int, "Width"));
 	mixin(addProperty!(int, "Height"));
@@ -131,7 +135,7 @@ class AnyMapImage
 		}
 	}
 
-	this(int width, int height, RGBColor color = new RGBColor(0, 0, 0))
+	this(int width = 0, int height = 0, RGBColor color = new RGBColor(0, 0, 0))
 	{
 		this._width = width;
 		this._height = height;
@@ -186,10 +190,37 @@ class AnyMapImage
 
 	alias width = getWidth;
 	alias height = getHeight;
+
+	final RGBColor[] array()
+	{
+		return _image;
+	}
+
+	// experimental feature (!)
+	void changeCapacity(int x, int y)
+	{
+		auto newLength = (x * y);
+		
+		if (newLength > _image.length)
+		{
+			auto restLength = newLength - _image.length;
+			_image.length += restLength;
+		}
+		else
+		{
+			if (newLength < _image.length)
+			{
+				auto restLength = _image.length - newLength;
+				_image.length -= restLength;
+			}
+		}
+		_width = x;
+		_height = y;
+	}
 }
 
 
-enum AnyMapFormat : string
+enum PixMapFormat : string
 {
 	PBM_TEXT 	= 	"P1",
 	PBM_BINARY 	=  	"P4",
@@ -199,43 +230,36 @@ enum AnyMapFormat : string
 	PPM_BINARY	= 	"P6",
 }
 
-abstract class ImageFile
+mixin template addConstructor(alias pmf)
+{
+	this(int width = 0, int height = 0, RGBColor color = new RGBColor(0, 0, 0))
+	{
+		_image  = new PixMapImage(width, height, color);
+		_header = pmf; 
+	}
+
+	alias image this;
+}
+
+
+class PixMapFile
 {
 	protected
 	{
-		AnyMapImage _image;
-		AnyMapFormat _header;
+
+		File _file;
+		PixMapImage _image;
+		PixMapFormat _header;
+
+		abstract void loader();
+		abstract void saver();
 	}
 
-	abstract void load(string filename);
-	abstract void save(string filename);	
-
-	final AnyMapImage image() 
-	{ 
-		return _image; 
-	}
-}
-
-class P6Image : ImageFile
-{
-	
-	this(int width, int height, RGBColor color = new RGBColor(0, 0, 0))
+	void load(string filename)
 	{
-		_image = new AnyMapImage(width, height, color);
-		_header = AnyMapFormat.PPM_BINARY;	
-	}
-
-	override void load(string filename)
-	{
-		import std.conv;
-		import std.stdio;
-		import std.string;
-
-		File file;
-
-		with (file)
+		with (_file)
 		{
-			open(filename, "r");
+			open(filename, `r`);
 
 			if (readln.strip == EnumValue(_header))
 			{
@@ -243,59 +267,179 @@ class P6Image : ImageFile
 				auto width = imageSize[0].parse!int;
 				auto height = imageSize[1].parse!int;
 
-				_image = new AnyMapImage(width, height);
-				auto buffer = new ubyte[width * 3];
+				_image = new PixMapImage(width, height);
 
-				readln;
-
-				for (uint i = 0; i < height; i++)
-				{
-					file.rawRead!ubyte(buffer);
-				
-					for (uint j = 0; j < width; j++)
-					{
-							_image[j, i] = new RGBColor(
-										buffer[j * 3],
-										buffer[j * 3 + 1],
-										buffer[j * 3 + 2] 
-									);
-					}
-				}
-				
+				loader;
 			}
 		}
 	}
-
-	override void save(string filename)
+	
+	void save(string filename)
 	{
-		import std.conv;
-		import std.stdio;
-		import std.string;
-		
-		File file;
-				
-		with (file)
+		with (_file)
 		{
-			enum MAXIMAL_LUMINANCE = 255;
 			open(filename, "w");
 			writeln(EnumValue(_header));
-			writeln(_image.getWidth, " ", _image.getHeight);
-			writeln(MAXIMAL_LUMINANCE);
-				
-			foreach (i; 0.._image.getHeight)
-			{
-				foreach (j; 0.._image.getWidth)
-				{
-					auto currentColor = _image[j, i];
-					file.write(
-						 cast(char) currentColor.getR,
-						 cast(char) currentColor.getG,
-						 cast(char) currentColor.getB,
-								);
-				}
-			}				
-	    }		
+			writeln(_image.width, " ", _image.height);
+
+			saver;
+		}
+	}	
+
+	final PixMapImage image() 
+	{ 
+		return _image; 
 	}
 
 	alias image this;
-}  
+}
+
+
+class P6Image : PixMapFile
+{
+	mixin addConstructor!(PixMapFormat.PPM_BINARY);
+
+	override void loader()
+	{
+		_file.readln;
+
+		auto buffer = new ubyte[width * 3];
+		
+		for (uint i = 0; i < height; i++)
+		{
+		 	_file.rawRead!ubyte(buffer);
+						
+		    for (uint j = 0; j < width; j++)
+		    {
+		 	 	_image[j, i] = new RGBColor(buffer[j * 3], buffer[j * 3 + 1], buffer[j * 3 + 2]);
+		    } 
+		}
+	}
+
+	override void saver()
+	{
+		auto MAXIMAL_LUMINANCE = 255;
+		_file.writeln(MAXIMAL_LUMINANCE);
+		
+		foreach (e; _image.array)
+		{
+			_file.write(
+			 	cast(char) e.getR,
+		 		cast(char) e.getG,
+			    cast(char) e.getB
+			);
+		}
+	}
+}
+
+class P3Image : PixMapFile
+{
+	mixin addConstructor!(PixMapFormat.PPM_TEXT);
+
+	override void loader()
+	{
+		_file.readln;
+
+		// skip maximal intensity description
+		_file.readln;
+		
+		string triplet;
+		int index = 0;
+						
+		while ((triplet = _file.readln) !is null)
+		{				
+			auto rgb = triplet.split;
+
+			_image[index] = new RGBColor(
+		 		rgb[0].parse!int,
+		        rgb[1].parse!int,
+		        rgb[2].parse!int		
+ 			);
+		 	index++;
+		}
+	}
+
+	override void saver()
+	{
+		auto MAXIMAL_LUMINANCE = 255;
+		_file.writeln(MAXIMAL_LUMINANCE);
+
+		foreach (e; _image.array)
+		{
+			_file.writefln(
+				"%d %d %d",
+				e.getR,
+				e.getG,
+				e.getB
+		    );
+	    }
+     }
+}
+
+
+class P1Image : PixMapFile
+{
+	mixin addConstructor!(PixMapFormat.PBM_TEXT);
+
+	override void loader()
+	{
+		 string line;
+		 int index;
+		
+		 auto WHITE = new RGBColor(255, 255, 255);
+		 auto BLACK = new RGBColor(0, 0, 0);
+						
+		 while ((line = _file.readln) !is null)
+		 {
+		 	auto row  = line.split;
+		
+		 	foreach (i, e; row)
+		 	{
+		 		_image[i, index] = (e == "0") ? BLACK : WHITE;  						
+		 	}					
+		 	index++;
+		 }					
+	}
+
+	override void saver()
+	{
+		import std.algorithm;
+		import std.range : chunks;
+		
+		foreach (rows; _image.array.chunks(_image.width))
+		{
+		 	_file.writeln(
+		 		rows
+		 			.map!(a => (a.luminance < 255) ? "0" : "1")
+		 			.join(" ")
+		 	);
+		}
+	}
+}
+
+
+PixMapFile image(int width = 0, int height = 0, PixMapFormat pmFormat = PixMapFormat.PPM_BINARY)
+{
+	PixMapFile pixmap;
+
+	final switch (pmFormat) with (PixMapFormat)
+	{
+		case PBM_TEXT:
+			pixmap = new P1Image(width, height);
+			break;
+		case PBM_BINARY:
+			break;
+		case PGM_TEXT:
+			break;
+		case PGM_BINARY:
+			break;
+		case PPM_TEXT:
+			pixmap = new P3Image(width, height);
+			break;
+		case PPM_BINARY:
+			pixmap = new P6Image(width, height);
+			break;
+	}
+
+	return pixmap;
+}
