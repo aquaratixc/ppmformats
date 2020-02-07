@@ -6,13 +6,13 @@ private
 	import std.stdio;
 	import std.string;
 	
-	template addProperty(T, string propertyName)
+	template addProperty(T, string propertyName, string defaultValue = T.init.to!string)
 	{
 		import std.string : format, toLower;
 	 
 		const char[] addProperty = format(
 			`
-			private %2$s %1$s;
+			private %2$s %1$s = %4$s;
 	 
 			void set%3$s(%2$s %1$s)
 			{
@@ -26,7 +26,8 @@ private
 			`,
 			"_" ~ propertyName.toLower,
 			T.stringof,
-			propertyName
+			propertyName,
+			defaultValue
 			);
 	}
 
@@ -418,6 +419,93 @@ class P1Image : PixMapFile
 }
 
 
+class P2Image : PixMapFile
+{
+	mixin(addProperty!(int, "Intensity", "255"));
+	mixin addConstructor!(PixMapFormat.PGM_TEXT);
+
+	override void loader()
+	{
+		_file.readln;
+
+		// skip maximal intensity description
+		_file.readln;
+		
+	     string line;
+		 int index;
+		
+		 while ((line = _file.readln) !is null)
+		 {
+		 	auto row  = line.split;
+		
+		 	foreach (i, e; row)
+		 	{
+		 		auto I = e.parse!int;
+		 		_image[i, index] = new RGBColor(I, I, I);  						
+		 	}					
+		 	index++;
+		 } 
+	}
+
+	override void saver()
+	{
+		_file.writeln(_intensity);
+
+	    import std.algorithm;
+	    import std.range : chunks;
+	    		
+	   	foreach (rows; _image.array.chunks(_image.width))
+	    {
+			auto toIntensity(RGBColor color)
+			{
+				int I = color.luminance601.to!int;
+				return (I > _intensity) ? _intensity : I;				
+			}
+			
+	    	_file.writeln(
+	    		 rows
+	    		 	.map!(a => toIntensity(a).to!string)
+	    		 	.join(" ")
+	    	);
+	    }
+     }
+}
+
+class P4Image : PixMapFile
+{
+	mixin(addProperty!(int, "Intensity", "255"));
+	mixin addConstructor!(PixMapFormat.PGM_BINARY);
+
+	override void loader()
+	{
+		_file.readln;
+
+		// skip maximal intensity description
+		_file.readln;
+
+		auto buffer = new ubyte[width * height];
+		_file.rawRead!ubyte(buffer);
+
+		foreach (i, e; buffer)
+		{
+			_image[i] = new RGBColor(e, e, e);
+		}
+	}
+
+	override void saver()
+	{
+		_file.writeln(_intensity);
+
+		foreach (e; _image.array)
+		{
+			_file.write(
+				cast(char) (e.luminance601.to!ubyte)
+			);
+		}
+     }
+}
+
+
 PixMapFile image(int width = 0, int height = 0, PixMapFormat pmFormat = PixMapFormat.PPM_BINARY)
 {
 	PixMapFile pixmap;
@@ -430,8 +518,10 @@ PixMapFile image(int width = 0, int height = 0, PixMapFormat pmFormat = PixMapFo
 		case PBM_BINARY:
 			break;
 		case PGM_TEXT:
+			pixmap = new P2Image(width, height);
 			break;
 		case PGM_BINARY:
+			pixmap = new P4Image(width, height);
 			break;
 		case PPM_TEXT:
 			pixmap = new P3Image(width, height);
