@@ -392,11 +392,11 @@ class P1Image : PixMapFile
 						
 		 while ((line = _file.readln) !is null)
 		 {
-		 	auto row  = line.split;
+		 	auto row  = line.replace(" ", "");
 		
 		 	foreach (i, e; row)
 		 	{
-		 		_image[i, index] = (e == "0") ? BLACK : WHITE;  						
+		 		_image[i, index] = (e.to!string == "0") ? BLACK : WHITE;  						
 		 	}					
 		 	index++;
 		 }					
@@ -412,7 +412,7 @@ class P1Image : PixMapFile
 		 	_file.writeln(
 		 		rows
 		 			.map!(a => (a.luminance < 255) ? "0" : "1")
-		 			.join(" ")
+		 			.join("")
 		 	);
 		}
 	}
@@ -471,7 +471,7 @@ class P2Image : PixMapFile
      }
 }
 
-class P4Image : PixMapFile
+class P5Image : PixMapFile
 {
 	mixin(addProperty!(int, "Intensity", "255"));
 	mixin addConstructor!(PixMapFormat.PGM_BINARY);
@@ -506,6 +506,100 @@ class P4Image : PixMapFile
 }
 
 
+class P4Image : PixMapFile
+{
+	mixin addConstructor!(PixMapFormat.PBM_BINARY);
+
+	auto setBit(int value, int n)
+	{
+		return (value | (1 << n));
+	}
+
+	auto getBit(int value, int n)
+	{
+		return ((value >> n) & 1);
+	}
+
+	auto clearBit(int value, int n)
+	{
+		return (value & ~(1 << n));
+	}
+
+	override void loader()
+	{
+		auto imageSize = width * height;
+		auto buffer = new ubyte[imageSize];
+		_file.rawRead!ubyte(buffer);
+
+		int index;
+
+		auto BLACK = new RGBColor(0, 0, 0);
+		auto WHITE = new RGBColor(255, 255, 255);
+
+		foreach (e; buffer)
+		{
+			if (index < imageSize)
+			{
+				foreach (i; 0..8)
+				{
+					auto I = getBit(cast(int) e, i);
+					_image[index] = (I == 0) ? BLACK : WHITE;
+					index++;
+				}
+			}
+			else
+			{
+				break;
+			}
+		}				
+	}
+
+	override void saver()
+	{
+		int[] bytes;
+		bytes ~= new int[width * height];
+		
+		while ((bytes.length % 8) != 0)
+		{
+			bytes ~= 0;
+		}
+
+		int bytesCount;
+		int shiftCount;
+
+		foreach (e; _image.array)
+		{
+			auto I = (e.luminance < 255) ? 0 : 1;
+			auto currentByte = bytes[bytesCount];
+			
+			if (I == 0)
+			{
+				currentByte = clearBit(currentByte, shiftCount);
+			}
+			else
+			{
+				currentByte = setBit(currentByte, shiftCount);
+			}
+			bytes[bytesCount] = currentByte;
+			shiftCount++;
+			
+			if (shiftCount > 7)
+			{
+				shiftCount = 0;
+				bytesCount++;
+			}
+		}
+
+		foreach (e; bytes)
+		{
+			_file.write(
+				cast(char) e
+			);
+		}
+	}
+}
+
+
 PixMapFile image(int width = 0, int height = 0, PixMapFormat pmFormat = PixMapFormat.PPM_BINARY)
 {
 	PixMapFile pixmap;
@@ -516,12 +610,13 @@ PixMapFile image(int width = 0, int height = 0, PixMapFormat pmFormat = PixMapFo
 			pixmap = new P1Image(width, height);
 			break;
 		case PBM_BINARY:
+			pixmap = new P4Image(width, height);
 			break;
 		case PGM_TEXT:
 			pixmap = new P2Image(width, height);
 			break;
 		case PGM_BINARY:
-			pixmap = new P4Image(width, height);
+			pixmap = new P5Image(width, height);
 			break;
 		case PPM_TEXT:
 			pixmap = new P3Image(width, height);
