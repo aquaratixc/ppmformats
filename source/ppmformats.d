@@ -39,6 +39,16 @@ private
 		return tmp; 
 	}
 
+	mixin template addConstructor(alias pmf)
+	{
+		this(int width = 0, int height = 0, RGBColor color = new RGBColor(0, 0, 0))
+		{
+			_image  = new PixMapImage(width, height, color);
+			_header = pmf; 
+		}
+	
+		alias image this;
+	}
 }
 
 class RGBColor
@@ -229,17 +239,6 @@ enum PixMapFormat : string
 	PGM_BINARY	=	"P5",
 	PPM_TEXT	=	"P3",
 	PPM_BINARY	= 	"P6",
-}
-
-mixin template addConstructor(alias pmf)
-{
-	this(int width = 0, int height = 0, RGBColor color = new RGBColor(0, 0, 0))
-	{
-		_image  = new PixMapImage(width, height, color);
-		_header = pmf; 
-	}
-
-	alias image this;
 }
 
 
