@@ -465,7 +465,7 @@ class P2Image : PixMapFile
 	    	_file.writeln(
 	    		 rows
 	    		 	.map!(a => toIntensity(a).to!string)
-	    		 	.join(" ")
+	    		 	.join("")
 	    	);
 	    }
      }
@@ -510,19 +510,22 @@ class P4Image : PixMapFile
 {
 	mixin addConstructor!(PixMapFormat.PBM_BINARY);
 
-	auto setBit(int value, int n)
+	private
 	{
-		return (value | (1 << n));
-	}
+		auto setBit(int value, int n)
+		{
+			return (value | (1 << n));
+		}
 
-	auto getBit(int value, int n)
-	{
-		return ((value >> n) & 1);
-	}
+		auto getBit(int value, int n)
+		{
+			return ((value >> n) & 1);
+		}
 
-	auto clearBit(int value, int n)
-	{
-		return (value & ~(1 << n));
+		auto clearBit(int value, int n)
+		{
+			return (value & ~(1 << n));
+		}
 	}
 
 	override void loader()
