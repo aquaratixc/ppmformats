@@ -39,16 +39,6 @@ private
 		return tmp; 
 	}
 
-	mixin template addConstructor(alias pmf)
-	{
-		this(int width = 0, int height = 0, RGBColor color = new RGBColor(0, 0, 0))
-		{
-			_image  = new PixMapImage(width, height, color);
-			_header = pmf; 
-		}
-	
-		alias image this;
-	}
 }
 
 class RGBColor
@@ -241,6 +231,17 @@ enum PixMapFormat : string
 	PPM_BINARY	= 	"P6",
 }
 
+mixin template addConstructor(alias pmf)
+{
+	this(int width = 0, int height = 0, RGBColor color = new RGBColor(0, 0, 0))
+	{
+		_image  = new PixMapImage(width, height, color);
+		_header = pmf; 
+	}
+
+	alias image this;
+}
+
 
 class PixMapFile
 {
@@ -297,11 +298,13 @@ class PixMapFile
 
 class P6Image : PixMapFile
 {
+	mixin(addProperty!(int, "Intensity", "255"));
 	mixin addConstructor!(PixMapFormat.PPM_BINARY);
 
 	override void loader()
 	{
-		_file.readln;
+		auto data = _file.readln;
+		_intensity = data.parse!int;
 
 		auto buffer = new ubyte[width * 3];
 		
@@ -311,37 +314,51 @@ class P6Image : PixMapFile
 						
 		    for (uint j = 0; j < width; j++)
 		    {
-		 	 	_image[j, i] = new RGBColor(buffer[j * 3], buffer[j * 3 + 1], buffer[j * 3 + 2]);
+				auto R = buffer[j * 3];
+				auto G = buffer[j * 3 + 1];
+				auto B = buffer[j * 3 + 2];
+		 	 	_image[j, i] = new RGBColor(
+					(R > _intensity) ? _intensity : R,
+					(G > _intensity) ? _intensity : G,
+					(B > _intensity) ? _intensity : B
+				);
 		    } 
 		}
 	}
 
 	override void saver()
 	{
-		auto MAXIMAL_LUMINANCE = 255;
-		_file.writeln(MAXIMAL_LUMINANCE);
-		
+		_file.writeln(_intensity);
+
 		foreach (e; _image.array)
 		{
+			auto R = e.getR;
+			auto G = e.getG;
+			auto B = e.getB;
+
+			auto rr = (R > _intensity) ? _intensity : R;
+			auto gg = (G > _intensity) ? _intensity : G;
+			auto bb = (B > _intensity) ? _intensity : B;
+
 			_file.write(
-			 	cast(char) e.getR,
-		 		cast(char) e.getG,
-			    cast(char) e.getB
-			);
-		}
+				cast(char) rr,
+				cast(char) gg,
+				cast(char) bb
+		    );
+	    }
 	}
 }
 
 class P3Image : PixMapFile
 {
+	mixin(addProperty!(int, "Intensity", "255"));
 	mixin addConstructor!(PixMapFormat.PPM_TEXT);
 
 	override void loader()
 	{
-		_file.readln;
-
 		// skip maximal intensity description
-		_file.readln;
+		auto data = _file.readln;
+		_intensity = data.parse!int;
 		
 		string triplet;
 		int index = 0;
@@ -349,11 +366,14 @@ class P3Image : PixMapFile
 		while ((triplet = _file.readln) !is null)
 		{				
 			auto rgb = triplet.split;
+			auto R = rgb[0].parse!int;
+		    auto G = rgb[1].parse!int;
+		    auto B = rgb[2].parse!int;
 
 			_image[index] = new RGBColor(
-		 		rgb[0].parse!int,
-		        rgb[1].parse!int,
-		        rgb[2].parse!int		
+		 		(R > _intensity) ? _intensity : R,
+		        (G > _intensity) ? _intensity : G,
+		        (B > _intensity) ? _intensity : B		
  			);
 		 	index++;
 		}
@@ -361,16 +381,19 @@ class P3Image : PixMapFile
 
 	override void saver()
 	{
-		auto MAXIMAL_LUMINANCE = 255;
-		_file.writeln(MAXIMAL_LUMINANCE);
+		_file.writeln(_intensity);
 
 		foreach (e; _image.array)
 		{
+			auto R = e.getR;
+			auto G = e.getG;
+			auto B = e.getB;
+
 			_file.writefln(
 				"%d %d %d",
-				e.getR,
-				e.getG,
-				e.getB
+				(R > _intensity) ? _intensity : R,
+				(G > _intensity) ? _intensity : G,
+				(B > _intensity) ? _intensity : B
 		    );
 	    }
      }
@@ -425,10 +448,9 @@ class P2Image : PixMapFile
 
 	override void loader()
 	{
-		_file.readln;
-
-		// skip maximal intensity description
-		_file.readln;
+		 // skip maximal intensity description
+		 auto data = _file.readln;
+		 _intensity = data.parse!int;
 		
 	     string line;
 		 int index;
@@ -439,7 +461,8 @@ class P2Image : PixMapFile
 		
 		 	foreach (i, e; row)
 		 	{
-		 		auto I = e.parse!int;
+		 		auto l = e.parse!int;
+				auto I = (l > _intensity) ? _intensity : l;
 		 		_image[i, index] = new RGBColor(I, I, I);  						
 		 	}					
 		 	index++;
@@ -457,14 +480,22 @@ class P2Image : PixMapFile
 	    {
 			auto toIntensity(RGBColor color)
 			{
-				int I = color.luminance601.to!int;
+				int I;
+				if ((color.getR == color.getG) && (color.getG == color.getB) && (color.getR == color.getB))
+				{
+					I = color.getR;
+				}
+				else
+				{
+					I = color.luminance601.to!int;
+				}
 				return (I > _intensity) ? _intensity : I;				
 			}
 			
 	    	_file.writeln(
 	    		 rows
 	    		 	.map!(a => toIntensity(a).to!string)
-	    		 	.join("")
+	    		 	.join(" ")
 	    	);
 	    }
      }
@@ -477,17 +508,17 @@ class P5Image : PixMapFile
 
 	override void loader()
 	{
-		_file.readln;
-
 		// skip maximal intensity description
-		_file.readln;
+		auto data = _file.readln;
+		_intensity = data.to!int;
 
 		auto buffer = new ubyte[width * height];
 		_file.rawRead!ubyte(buffer);
 
 		foreach (i, e; buffer)
 		{
-			_image[i] = new RGBColor(e, e, e);
+			auto I =  (e > _intensity) ? _intensity : e;
+			_image[i] = new RGBColor(I, I, I);
 		}
 	}
 
@@ -497,8 +528,18 @@ class P5Image : PixMapFile
 
 		foreach (e; _image.array)
 		{
+			ubyte I;
+			if ((e.getR == e.getG) && (e.getG == e.getB) && (e.getR == e.getB))
+			{
+				I = e.getR.to!ubyte;
+			}
+			else
+			{
+				I = e.luminance601.to!ubyte;
+			}
+
 			_file.write(
-				cast(char) (e.luminance601.to!ubyte)
+				cast(char) I
 			);
 		}
      }
@@ -509,22 +550,19 @@ class P4Image : PixMapFile
 {
 	mixin addConstructor!(PixMapFormat.PBM_BINARY);
 
-	private
+	auto setBit(int value, int n)
 	{
-		auto setBit(int value, int n)
-		{
-			return (value | (1 << n));
-		}
+		return (value | (1 << n));
+	}
 
-		auto getBit(int value, int n)
-		{
-			return ((value >> n) & 1);
-		}
+	auto getBit(int value, int n)
+	{
+		return ((value >> n) & 1);
+	}
 
-		auto clearBit(int value, int n)
-		{
-			return (value & ~(1 << n));
-		}
+	auto clearBit(int value, int n)
+	{
+		return (value & ~(1 << n));
 	}
 
 	override void loader()
