@@ -245,11 +245,10 @@ mixin template addConstructor(alias pmf)
 
 class PixMapFile
 {
+	mixin(addProperty!(PixMapImage, "Image"));
 	protected
 	{
-
 		File _file;
-		PixMapImage _image;
 		PixMapFormat _header;
 
 		abstract void loader();
@@ -583,7 +582,8 @@ class P4Image : PixMapFile
 				foreach (i; 0..8)
 				{
 					auto I = getBit(cast(int) e, i);
-					_image[index] = (I == 0) ? BLACK : WHITE;
+					//_image[index] = (I == 0) ? BLACK : WHITE;
+					_image[index] = I ? BLACK : WHITE;
 					index++;
 				}
 			}
@@ -609,7 +609,8 @@ class P4Image : PixMapFile
 
 		foreach (e; _image.array)
 		{
-			auto I = (e.luminance < 255) ? 0 : 1;
+			// auto I = (e.luminance == 0) ? 0 : 1;
+			auto I = (e.luminance) ? 0 : 1;
 			auto currentByte = bytes[bytesCount];
 			
 			if (I == 0)
