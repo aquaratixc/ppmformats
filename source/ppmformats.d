@@ -258,7 +258,7 @@ class PixMapFile
 	private
 	{
 		// set i/o mode (actual for windows system)
-		auto IOmode(string mode)
+		auto IOMode(string mode)
 		{
 			
 			if (isBinaryFormat) 
@@ -276,7 +276,7 @@ class PixMapFile
 	{
 		with (_file)
 		{
-			open(filename, `r`);
+			open(filename, IOMode(`r`));
 
 			if (readln.strip == EnumValue(_header))
 			{
@@ -295,7 +295,7 @@ class PixMapFile
 	{
 		with (_file)
 		{
-			open(filename, "w");
+			open(filename, IOMode("w"));
 			writeln(EnumValue(_header));
 			writeln(_image.width, " ", _image.height);
 
