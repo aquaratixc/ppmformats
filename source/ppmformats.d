@@ -255,6 +255,23 @@ class PixMapFile
 		abstract void saver();
 	}
 
+	private
+	{
+		// set i/o mode (actual for windows system)
+		auto IOmode(string mode)
+		{
+			
+			if (isBinaryFormat) 
+			{
+				return mode ~ `b`;
+			}
+			else
+			{
+				return mode;
+			}
+		}
+	}
+
 	void load(string filename)
 	{
 		with (_file)
@@ -284,6 +301,26 @@ class PixMapFile
 
 			saver;
 		}
+	}
+
+	final bool isBinaryFormat()
+	{
+		return 
+				( 
+				  (_header == PixMapFormat.PBM_BINARY) |
+				  (_header == PixMapFormat.PGM_BINARY) |
+				  (_header == PixMapFormat.PPM_BINARY)
+				);
+	}
+
+	final bool isTextFormat()
+	{
+		return 
+				( 
+				  (_header == PixMapFormat.PBM_TEXT) |
+				  (_header == PixMapFormat.PGM_TEXT) |
+				  (_header == PixMapFormat.PPM_TEXT)
+				);
 	}	
 
 	final PixMapImage image() 
