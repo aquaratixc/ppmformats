@@ -38,7 +38,17 @@ private
 		OriginalType!E tmp = e;
 		return tmp; 
 	}
-
+	
+	mixin template addConstructor(alias pmf)
+	{
+		this(size_t width = 0, size_t height = 0, RGBColor color = new RGBColor(0, 0, 0))
+		{
+			_image  = new PixMapImage(width, height, color);
+			_header = pmf; 
+		}
+	
+		alias image this;
+	}
 }
 
 class RGBColor
@@ -62,6 +72,11 @@ class RGBColor
 	const float luminance601()
 	{
 	   return (_r * 0.3f + _g * 0.59f + _b * 0.11f);
+	}
+	
+	const float luminanceAverage()
+	{
+	   return (_r + _g + _b) / 3.0;
 	}
 
 	alias luminance = luminance709;
@@ -110,8 +125,8 @@ class RGBColor
 
 class PixMapImage
 {
-	mixin(addProperty!(int, "Width"));
-	mixin(addProperty!(int, "Height"));
+	mixin(addProperty!(size_t, "Width"));
+	mixin(addProperty!(size_t, "Height"));
 	
 	private
 	{
@@ -136,7 +151,7 @@ class PixMapImage
 		}
 	}
 
-	this(int width = 0, int height = 0, RGBColor color = new RGBColor(0, 0, 0))
+	this(size_t width = 0, size_t height = 0, RGBColor color = new RGBColor(0, 0, 0))
 	{
 		this._width = width;
 		this._height = height;
@@ -198,21 +213,21 @@ class PixMapImage
 	}
 
 	// experimental feature (!)
-	void changeCapacity(int x, int y)
+	void changeCapacity(size_t x, size_t y)
 	{
-		auto newLength = (x * y);
+		long newLength = (x * y);
 		
 		if (newLength > _image.length)
 		{
-			auto restLength = newLength - _image.length;
-			_image.length += restLength;
+			auto restLength = cast(long) newLength - _image.length;
+			_image.length += cast(size_t) restLength;
 		}
 		else
 		{
 			if (newLength < _image.length)
 			{
-				auto restLength = _image.length - newLength;
-				_image.length -= restLength;
+				auto restLength = cast(long) _image.length - newLength;
+				_image.length -= cast(size_t) restLength;
 			}
 		}
 		_width = x;
@@ -230,18 +245,6 @@ enum PixMapFormat : string
 	PPM_TEXT	=	"P3",
 	PPM_BINARY	= 	"P6",
 }
-
-mixin template addConstructor(alias pmf)
-{
-	this(int width = 0, int height = 0, RGBColor color = new RGBColor(0, 0, 0))
-	{
-		_image  = new PixMapImage(width, height, color);
-		_header = pmf; 
-	}
-
-	alias image this;
-}
-
 
 class PixMapFile
 {
