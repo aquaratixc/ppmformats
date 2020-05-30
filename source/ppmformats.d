@@ -710,7 +710,7 @@ PixMapFile image(size_t width = 0, size_t height = 0, PixMapFormat pmFormat = Pi
 	return pixmap;
 }
 
-PixMapFile image(size_t width = 0, size_t height = 0, string pmFormat)
+PixMapFile image(size_t width = 0, size_t height = 0, string pmFormat = "P6")
 {
 	PixMapFile pixmap;
 
