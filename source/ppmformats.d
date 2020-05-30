@@ -213,7 +213,7 @@ class PixMapImage
 	}
 
 	// experimental feature (!)
-	void changeCapacity(size_t x, size_t y)
+	final void changeCapacity(size_t x, size_t y)
 	{
 		long newLength = (x * y);
 		
@@ -681,7 +681,7 @@ class P4Image : PixMapFile
 }
 
 
-PixMapFile image(int width = 0, int height = 0, PixMapFormat pmFormat = PixMapFormat.PPM_BINARY)
+PixMapFile image(size_t width = 0, size_t height = 0, PixMapFormat pmFormat = PixMapFormat.PPM_BINARY)
 {
 	PixMapFile pixmap;
 
@@ -709,3 +709,36 @@ PixMapFile image(int width = 0, int height = 0, PixMapFormat pmFormat = PixMapFo
 
 	return pixmap;
 }
+
+PixMapFile image(size_t width = 0, size_t height = 0, string pmFormat)
+{
+	PixMapFile pixmap;
+
+	switch (pmFormat) 
+	{
+		case "P1":
+			pixmap = new P1Image(width, height);
+			break;
+		case "P4":
+			pixmap = new P4Image(width, height);
+			break;
+		case "P2":
+			pixmap = new P2Image(width, height);
+			break;
+		case "P5":
+			pixmap = new P5Image(width, height);
+			break;
+		case "P3":
+			pixmap = new P3Image(width, height);
+			break;
+		case "P6":
+			pixmap = new P6Image(width, height);
+			break;
+		default:
+			assert(0);
+	}
+
+	return pixmap;
+}
+
+
