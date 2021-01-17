@@ -468,7 +468,7 @@ class P1Image : PixMapFile
 		import std.algorithm;
 		import std.range : chunks;
 		
-		foreach (rows; _image.array.chunks(_image.width))
+		foreach (rows; _image.array.chunks(width))
 		{
 		 	_file.writeln(
 		 		rows
@@ -515,7 +515,7 @@ class P2Image : PixMapFile
 	    import std.algorithm;
 	    import std.range : chunks;
 	    		
-	   	foreach (rows; _image.array.chunks(_image.width))
+	   	foreach (rows; _image.array.chunks(width))
 	    {
 			auto toIntensity(RGBColor color)
 			{
