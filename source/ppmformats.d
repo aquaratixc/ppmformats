@@ -453,7 +453,7 @@ class P1Image : PixMapFile
 						
 		 while ((line = _file.readln) !is null)
 		 {
-		 	auto row  = line.replace(" ", "");
+		 	auto row  = line.replace(" ", "").replace("\n", "");
 		
 		 	foreach (i, e; row)
 		 	{
