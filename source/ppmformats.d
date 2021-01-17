@@ -457,7 +457,7 @@ class P1Image : PixMapFile
 		
 		 	foreach (i, e; row)
 		 	{
-		 		_image[i, index] = (e.to!string == "0") ? BLACK : WHITE;  						
+		 		_image[i, index] = (e.to!string == "0") ? WHITE : BLACK;  						
 		 	}					
 		 	index++;
 		 }					
@@ -472,7 +472,7 @@ class P1Image : PixMapFile
 		{
 		 	_file.writeln(
 		 		rows
-		 			.map!(a => (a.luminance < 255) ? "0" : "1")
+		 			.map!(a => (a.luminance < 255) ? "1" : "0")
 		 			.join("")
 		 	);
 		}
@@ -623,7 +623,7 @@ class P4Image : PixMapFile
 				{
 					auto I = getBit(cast(int) e, i);
 					//_image[index] = (I == 0) ? BLACK : WHITE;
-					_image[index] = I ? BLACK : WHITE;
+					_image[index] = I ? WHITE : BLACK;
 					index++;
 				}
 			}
@@ -650,10 +650,10 @@ class P4Image : PixMapFile
 		foreach (e; _image.array)
 		{
 			// auto I = (e.luminance == 0) ? 0 : 1;
-			auto I = (e.luminance) ? 0 : 1;
+			auto I = (e.luminance) ? 1 : 0;
 			auto currentByte = bytes[bytesCount];
 			
-			if (I == 0)
+			if (I != 0)
 			{
 				currentByte = clearBit(currentByte, shiftCount);
 			}
