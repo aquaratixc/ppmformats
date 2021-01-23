@@ -2,14 +2,15 @@ module ppmformats;
 
 private
 {
+	import std.algorithm;
 	import std.conv;
+	import std.range;
 	import std.stdio;
 	import std.string;
+	import std.traits;
 	
 	template addProperty(T, string propertyName, string defaultValue = T.init.to!string)
-	{
-		import std.string : format, toLower;
-	 
+	{	 
 		const char[] addProperty = format(
 			`
 			private %2$s %1$s = %4$s;
@@ -34,7 +35,6 @@ private
 	auto EnumValue(E)(E e) 
 		if(is(E == enum)) 
 	{
-		import std.traits : OriginalType;
 		OriginalType!E tmp = e;
 		return tmp; 
 	}
@@ -83,16 +83,11 @@ class RGBColor
 
 	override string toString()
 	{
-		import std.string : format;
-		
 		return format("RGBColor(%d, %d, %d, I = %f)", _r, _g, _b, this.luminance);
 	}
 
 	RGBColor opBinary(string op, T)(auto ref T rhs)
 	{
-		import std.algorithm : clamp;
-		import std.string : format;
-
 		return mixin(
 			format(`new RGBColor( 
 				clamp(cast(int) (_r  %1$s rhs), 0, 255),
@@ -107,9 +102,6 @@ class RGBColor
 
 	RGBColor opBinary(string op)(RGBColor rhs)
 	{
-		import std.algorithm : clamp;
-		import std.string : format;
-
 		return mixin(
 			format(`new RGBColor( 
 				clamp(cast(int) (_r  %1$s rhs.getR), 0, 255),
@@ -131,8 +123,6 @@ class PixMapImage
 	private
 	{
 		RGBColor[] _image;
-
-		import std.algorithm : clamp;
 
 		auto actualIndex(size_t i)
 		{
@@ -212,7 +202,6 @@ class PixMapImage
 		return _image;
 	}
 
-	// experimental feature (!)
 	final void changeCapacity(size_t x, size_t y)
 	{
 		long newLength = (x * y);
@@ -465,15 +454,12 @@ class P1Image : PixMapFile
 
 	override void saver()
 	{
-		import std.algorithm;
-		import std.range : chunks;
-		
 		foreach (rows; _image.array.chunks(width))
 		{
 		 	_file.writeln(
 		 		rows
 		 			.map!(a => (a.luminance < 255) ? "1" : "0")
-		 			.join("")
+		 			.join(" ")
 		 	);
 		}
 	}
@@ -512,9 +498,6 @@ class P2Image : PixMapFile
 	{
 		_file.writeln(_intensity);
 
-	    import std.algorithm;
-	    import std.range : chunks;
-	    		
 	   	foreach (rows; _image.array.chunks(width))
 	    {
 			auto toIntensity(RGBColor color)
@@ -740,5 +723,3 @@ PixMapFile image(size_t width = 0, size_t height = 0, string pmFormat = "P6")
 
 	return pixmap;
 }
-
-
