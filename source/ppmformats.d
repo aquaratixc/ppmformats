@@ -82,7 +82,7 @@ class RGBColor
 	alias luminance = luminance709;
 
 	override string toString()
-	{
+	{		
 		return format("RGBColor(%d, %d, %d, I = %f)", _r, _g, _b, this.luminance);
 	}
 
@@ -128,7 +128,7 @@ class PixMapImage
 		{
 			auto S = _width * _height;
 		
-			return clamp(i, 0, S);
+			return clamp(i, 0, S - 1);
 		}
 
 		auto actualIndex(size_t i, size_t j)
@@ -201,7 +201,19 @@ class PixMapImage
 	{
 		return _image;
 	}
-
+	
+	final void array(RGBColor[] image)
+	{
+		if (image.length == _image.length) 
+		{
+			this._image = image;
+		}
+		else
+		{
+			throw new Exception("Lengths must be the same");
+		}
+	}
+	
 	final void changeCapacity(size_t x, size_t y)
 	{
 		long newLength = (x * y);
@@ -237,12 +249,12 @@ enum PixMapFormat : string
 
 class PixMapFile
 {
-	mixin(addProperty!(PixMapImage, "Image"));
 	protected
 	{
 		File _file;
 		PixMapFormat _header;
-
+		PixMapImage _image;
+		
 		abstract void loader();
 		abstract void saver();
 	}
@@ -295,6 +307,7 @@ class PixMapFile
 		}
 	}
 
+	// is raw format ?
 	final bool isBinaryFormat()
 	{
 		return 
@@ -305,6 +318,7 @@ class PixMapFile
 				);
 	}
 
+	// is text format ?
 	final bool isTextFormat()
 	{
 		return 
@@ -315,9 +329,16 @@ class PixMapFile
 				);
 	}	
 
+	// get image
 	final PixMapImage image() 
 	{ 
 		return _image; 
+	}
+	
+	// set image
+	final void image(PixMapImage image)
+	{
+		this._image = image;
 	}
 
 	alias image this;
@@ -376,6 +397,7 @@ class P6Image : PixMapFile
 	    }
 	}
 }
+
 
 class P3Image : PixMapFile
 {
@@ -446,10 +468,10 @@ class P1Image : PixMapFile
 		
 		 	foreach (i, e; row)
 		 	{
-		 		_image[i, index] = (e.to!string == "0") ? WHITE : BLACK;  						
+		 		_image[i, index] = (e.to!string == "0") ? WHITE : BLACK; 			
 		 	}					
 		 	index++;
-		 }					
+		 }				
 	}
 
 	override void saver()
@@ -497,7 +519,7 @@ class P2Image : PixMapFile
 	override void saver()
 	{
 		_file.writeln(_intensity);
-
+	
 	   	foreach (rows; _image.array.chunks(width))
 	    {
 			auto toIntensity(RGBColor color)
@@ -586,6 +608,9 @@ class P4Image : PixMapFile
 	{
 		return (value & ~(1 << n));
 	}
+	
+	auto BLACK = new RGBColor(0, 0, 0);
+	auto WHITE = new RGBColor(255, 255, 255);
 
 	override void loader()
 	{
@@ -595,18 +620,14 @@ class P4Image : PixMapFile
 
 		int index;
 
-		auto BLACK = new RGBColor(0, 0, 0);
-		auto WHITE = new RGBColor(255, 255, 255);
-
 		foreach (e; buffer)
 		{
 			if (index < imageSize)
 			{
 				foreach (i; 0..8)
 				{
-					auto I = getBit(cast(int) e, i);
-					//_image[index] = (I == 0) ? BLACK : WHITE;
-					_image[index] = I ? WHITE : BLACK;
+					auto I = getBit(cast(int) e, 7 - i);
+					_image[index] = I ? BLACK : WHITE;
 					index++;
 				}
 			}
@@ -618,47 +639,26 @@ class P4Image : PixMapFile
 	}
 
 	override void saver()
-	{
-		int[] bytes;
-		bytes ~= new int[width * height];
-		
-		while ((bytes.length % 8) != 0)
-		{
-			bytes ~= 0;
-		}
-
-		int bytesCount;
-		int shiftCount;
-
-		foreach (e; _image.array)
-		{
-			// auto I = (e.luminance == 0) ? 0 : 1;
-			auto I = (e.luminance) ? 1 : 0;
-			auto currentByte = bytes[bytesCount];
-			
-			if (I != 0)
+	{	    
+	    foreach (e; _image.array.chunks(width))
+	    {
+			foreach (r; e.chunks(8))
 			{
-				currentByte = clearBit(currentByte, shiftCount);
+				auto bits = 0x00;
+				
+				foreach (i, b; r)
+				{
+					auto I = (b.luminance == 0) ? 1 : 0;
+					
+					if (I == 1)
+					{
+						bits = setBit(bits, cast(int) (7 - i));
+					}
+				}
+				_file.write(
+					cast(char) bits
+				);
 			}
-			else
-			{
-				currentByte = setBit(currentByte, shiftCount);
-			}
-			bytes[bytesCount] = currentByte;
-			shiftCount++;
-			
-			if (shiftCount > 7)
-			{
-				shiftCount = 0;
-				bytesCount++;
-			}
-		}
-
-		foreach (e; bytes)
-		{
-			_file.write(
-				cast(char) e
-			);
 		}
 	}
 }
