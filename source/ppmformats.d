@@ -1,3 +1,13 @@
+// Written in the D programming language.
+
+/**
+Minimalistic library for working with Netpbm image formats. Currently, work with formats from P1 to P6 is supported.
+An overview of the internal structure of the library, its interfaces and applications is available at the link (in Russian): https://lhs-blog.info/programming/dlang/ppmformats-library/
+
+Copyright: LightHouse Software, 2020 - 2022
+Authors:   Oleg Bakharev,
+		   Ilya Pertsev
+*/
 module ppmformats;
 
 private
@@ -9,6 +19,11 @@ private
 	import std.string;
 	import std.traits;
 	
+	/**
+	A handy template for creating setters and getters for properties. For internal use only.
+	See_Also:
+		https://lhs-blog.info/programming/dlang/udobnoe-sozdanie-svoystv-v-klassah-i-strukturah/ (in Russian)
+	*/
 	template addProperty(T, string propertyName, string defaultValue = T.init.to!string)
 	{	 
 		const char[] addProperty = format(
@@ -32,6 +47,7 @@ private
 			);
 	}
 
+	/// Extract type value from enum. For internal use.
 	auto EnumValue(E)(E e) 
 		if(is(E == enum)) 
 	{
@@ -39,6 +55,7 @@ private
 		return tmp; 
 	}
 	
+	/// Add basic constructor for all image filetypes. For internal use.
 	mixin template addConstructor(alias pmf)
 	{
 		this(size_t width = 0, size_t height = 0, RGBColor color = new RGBColor(0, 0, 0))
@@ -51,12 +68,31 @@ private
 	}
 }
 
+/**
+	Class for representing color in RGB format.
+*/
 class RGBColor
 {
 	mixin(addProperty!(int, "R"));
 	mixin(addProperty!(int, "G"));
 	mixin(addProperty!(int, "B"));
-
+	
+	
+	/**
+	Constructor for creating colors in RGB format. 
+	If called without parameters, then all three values ​​of the channels R, G and B take the value 0, which corresponds to black.
+    Params:
+    R = 32-bit value for red channel. The value ranges from 0 (minimum value) to 255 (maximum value).
+    G = 32-bit value for green channel. The value ranges from 0 (minimum value) to 255 (maximum value).
+    B = 32-bit value for blue channel. The value ranges from 0 (minimum value) to 255 (maximum value).
+    
+    Typical usage:
+    ----
+    RGBColor color = new RGBColor; 					// Black color
+    RGBColor color = new RGBColor(255, 0, 0);   	// Red color
+    RGBColor color = new RGBColor(255, 255, 255);   // White color
+    ----
+    */
 	this(int R = 0, int G = 0, int B = 0)
 	{
 		this._r = R;
@@ -64,28 +100,93 @@ class RGBColor
 		this._b = B;
 	}
 
+	/**
+	Luminance according to ITU 709 standard.
+	Returns:
+	Luminance for a specific color as a floating point value.
+    
+    Typical usage:
+    ----
+    import std.stdio : writeln;
+    
+    RGBColor color = new RGBColor(255, 0, 0);   	// Red color
+	color.luminance709.writeln;
+    ----
+    */
 	const float luminance709()
 	{
 	   return (_r  * 0.2126f + _g  * 0.7152f + _b  * 0.0722f);
 	}
 	
+	/**
+	Luminance according to ITU 601 standard.
+	Returns:
+	Luminance for a specific color as a floating point value.
+    
+    Typical usage:
+    ----
+    import std.stdio : writeln;
+    
+    RGBColor color = new RGBColor(255, 0, 0);   	// Red color
+	color.luminance601.writeln;
+    ----
+    */
 	const float luminance601()
 	{
 	   return (_r * 0.3f + _g * 0.59f + _b * 0.11f);
 	}
 	
+	/**
+	Average luminance.
+	Returns:
+	Luminance for a specific color as a floating point value.
+    
+    Typical usage:
+    ----
+    import std.stdio : writeln;
+    
+    RGBColor color = new RGBColor(255, 0, 0);   	// Red color
+	color.luminanceAverage.writeln;
+    ----
+    */
 	const float luminanceAverage()
 	{
 	   return (_r + _g + _b) / 3.0;
 	}
 
+	/// Alias for standard (default) luminance calculation. Value is the same as luminance709.
 	alias luminance = luminance709;
 
+	/**
+	A string representation of a color.
+	The color is output as a string in the following format: RGBColor(R=<value>, G=<value>, B=<value>, I=<value>), where R,G,B are the values ​​of the three color channels, and I is color brightness according to ITU 709.
+	Returns:
+	String color representation.
+    
+    Typical usage:
+    ----
+    import std.stdio : writeln;
+    
+    RGBColor color = new RGBColor(255, 0, 0);   	// Red color
+	color.writeln;
+    ----
+    */
 	override string toString()
 	{		
 		return format("RGBColor(%d, %d, %d, I = %f)", _r, _g, _b, this.luminance);
 	}
 
+	/**
+	Basic arithmetic for color operations. The value on the right can be a value of any numeric type.
+    
+    Typical usage:
+    ----
+    RGBColor color = new RGBColor(255, 0, 0);   	// Red color
+	
+	auto newColor = color + 2;						// Add two for all channels in color
+	color = color / 2;								// Divide all channels by two
+    ----
+    */
 	RGBColor opBinary(string op, T)(auto ref T rhs)
 	{
 		return mixin(
@@ -100,6 +201,20 @@ class RGBColor
 		);
 	}
 
+	/**
+	Basic arithmetic for color operations. Only the RGBColor type can be used as the value on the right.
+    
+    Typical usage:
+    ----
+    RGBColor color  = new RGBColor(255, 0, 0);   	// Red color
+	RGBColor color2 = new RGBColor(0, 0, 255); 		// Blue color
+	
+	// mix two colors
+	auto mix = color + color2;
+	// difference between color
+	auto diff = color - color2;
+    ----
+    */
 	RGBColor opBinary(string op)(RGBColor rhs)
 	{
 		return mixin(
@@ -115,6 +230,9 @@ class RGBColor
 	}
 }
 
+/**
+	A class that provides a convenient interface for working with images. Represents a one-dimensional array.
+*/
 class PixMapImage
 {
 	mixin(addProperty!(size_t, "Width"));
@@ -124,6 +242,12 @@ class PixMapImage
 	{
 		RGBColor[] _image;
 
+		/**
+		Calculation of the real index in the internal one-dimensional array storing pixels.
+		The real length of the internal array is taken into account, therefore it is allowed to specify an index value greater than the actual length of the array.
+		
+		Internal use only for implementing class object accessor methods through indexing operators.
+		*/
 		auto actualIndex(size_t i)
 		{
 			auto S = _width * _height;
@@ -131,6 +255,13 @@ class PixMapImage
 			return clamp(i, 0, S - 1);
 		}
 
+		/**
+		Calculation of the real index in a one-dimensional array through two indexes. 
+		Thus, the possibility of referring to the internal array as a two-dimensional one is realized. 
+		As in the previous method, the binding to the actual length of the internal array is taken into account, so both indexes can be greater than the actual values ​​of the length and width of the image.
+		
+		Internal use only for implementing class object accessor methods through indexing operators.
+		*/
 		auto actualIndex(size_t i, size_t j)
 		{
 			auto W = cast(size_t) clamp(i, 0, _width - 1);
@@ -141,6 +272,21 @@ class PixMapImage
 		}
 	}
 
+	/**
+	A constructor for creating an image with given dimensions (length and width) and starting color for pixels. 
+	By default, all values ​​are zero, and black (i.e: RGBColor(0, 0, 0)) is used as the starting color.
+    Params:
+    width = Width of image as size_t value. 
+    height = Height of image as size_t value.
+    color = Initial color for pixels in image.
+    
+    Typical usage:
+    ----
+    PixMapImage pmi = new PixMapImage;  									// creating of empty image
+    PixMapImage pmi2 = new PixMapImage(20, 20);								// creating image of size 20x20, all pixels are black
+    PixMapImage pmi3 = new PixMapImage(20, 20, new RGBColor(255, 0, 255));	// creating image of size 20x20, all pixels are red
+    ----
+    */	
 	this(size_t width = 0, size_t height = 0, RGBColor color = new RGBColor(0, 0, 0))
 	{
 		this._width = width;
@@ -155,28 +301,71 @@ class PixMapImage
 		}
 	}
 
+	/**
+	Assigning a color value to an individual pixel through a two-index indexing operation.
+	Note: It is allowed to use as indices values ​​greater than the length and width (or less than 0) as indices, since the values ​​will be converted to the actual length of the image array.
+    
+    Typical usage:
+    ----
+    auto pmi = new PixMapImage(20, 20);   // creating image of size 20x20, all pixels are black
+    pmi[5, 5] = new RGBColor(0, 255, 0);  // pixel at coords (5;5) now are green
+    ----
+	*/	
 	RGBColor opIndexAssign(RGBColor color, size_t x, size_t y)
 	{
 		_image[actualIndex(x, y)] = color;
 		return color;
 	}
 
+	/**
+	Assigning a color value to an individual pixel through a one-index indexing operation.
+	Note: It is allowed to use an index greater than the actual length of the array or less than 0, since it is bound to the real length of the internal array of the image.
+    
+    Typical usage:
+    ----
+    auto pmi = new PixMapImage(20, 20);   // creating image of size 20x20, all pixels are black
+    pmi[5] = new RGBColor(0, 255, 0);  	  // 6th pixel now are green
+    ----
+	*/	
 	RGBColor opIndexAssign(RGBColor color, size_t x)
 	{
 		_image[actualIndex(x)] = color;
 		return color;
 	}
 
+	/**
+	Getting a color value from an individual pixel through a two-index indexing operation.
+	Note: It is allowed to use as indices values ​​greater than the length and width (or less than 0) as indices, since the values ​​will be converted to the actual length of the image array.
+    
+    Typical usage:
+    ----
+    auto pmi = new PixMapImage(20, 20);   // creating image of size 20x20, all pixels are black
+    pmi[5, 5].writeln;  				  // get pixel color at coords (5;5)
+    ----
+	*/	
 	RGBColor opIndex(size_t x, size_t y)
 	{
 		return _image[actualIndex(x, y)];
 	}
 
+	/**
+	Assigning a color value to an individual pixel through a one-index indexing operation.
+	Note: It is allowed to use an index greater than the actual length of the array or less than 0, since it is bound to the real length of the internal array of the image.
+    
+    Typical usage:
+    ----
+    auto pmi = new PixMapImage(20, 20);   // creating image of size 20x20, all pixels are black
+    pmi[5].writeln;  	  				  // getting color of 6th pixel
+    ----
+	*/	
 	RGBColor opIndex(size_t x)
 	{
 		return _image[actualIndex(x)];
 	}
 
+	/**
+	The string representation of the image. Returns a string representing the image as a two-dimensional array of RGBColor objects.
+	*/	
 	override string toString()
 	{
 		string accumulator = "[";
@@ -194,14 +383,40 @@ class PixMapImage
 		return accumulator[0..$-2] ~ "]";
 	}
 
+	/// Returns actual width of image as size_t value
 	alias width = getWidth;
+	/// Returns actual height of image as size_t value
 	alias height = getHeight;
 
+	/**
+	Returns the entire internal one-dimensional pixel array of the image.
+	Returns:
+	One-dimensional array of RGBColor objects.
+    
+    Typical usage:
+    ----
+    PixMapImage pmi = new PixMapFile(10, 10);
+	RGBColor[] pixels = pmi.array;	// get all pixels 
+    ----
+    */
 	final RGBColor[] array()
 	{
 		return _image;
 	}
 	
+	/**
+	Sets the inner pixel array of the image by feeding the outer array. 
+	The size of the array must be equal to the actual size of the image (i.e. the size of the given one-dimensional array must be equal to the product of the length of the image and its width)
+	Throws:
+	Exception if the length of the supplied array does not match the actual length of the internal array, as above.
+    
+    Typical usage:
+    ----
+    PixMapImage pmi = new PixMapFile(2);
+	RGBColor[] pixels = [new RGBColor(255, 255, 255), new RGBColor(255, 255, 255)];
+	pmi.array(pixels);	// set all pixels as white
+    ----
+    */
 	final void array(RGBColor[] image)
 	{
 		if (image.length == _image.length) 
@@ -214,6 +429,15 @@ class PixMapImage
 		}
 	}
 	
+	/**
+	Resizing an image according to its given length and width. 
+	Note:
+	If the length and/or width are smaller than the original values, then a literal cropping to the desired dimensions will be performed (not interpolation or approximation, but real cropping!). 
+	If the size parameters are larger than the original ones, then the image size will be increased by adding the default color to the end of the image (real array addition will be performed, not interpolation).
+    
+    WARNING:
+		The method is highly controversial and experimental. We strongly discourage its use in real projects.
+    */
 	final void changeCapacity(size_t x, size_t y)
 	{
 		long newLength = (x * y);
@@ -236,7 +460,9 @@ class PixMapImage
 	}
 }
 
-
+/**
+	All possible types of Portable Anymap Image formats in the form of a convenient division into binary and text image formats.
+*/
 enum PixMapFormat : string
 {
 	PBM_TEXT 	= 	"P1",
@@ -247,13 +473,21 @@ enum PixMapFormat : string
 	PPM_BINARY	= 	"P6",
 }
 
+/**
+	Common ancestor for all subsequent image types.
+	Implements a generic way to load/save images by providing generic load/save methods. 
+	Also, inheritance from this class allows descendant classes to have methods for working with images: indexing, assigning values ​​to pixels and accessing them without the need to create an object of the PixMapImage class to manipulate images.
+	
+	Implementation Note: The specific loading method is already implemented by descendant classes by overriding the abstract loader/saver methods in their implementations.
+*/
 class PixMapFile
 {
+	mixin(addProperty!(PixMapImage, "Image"));
+	
 	protected
 	{
 		File _file;
 		PixMapFormat _header;
-		PixMapImage _image;
 		
 		abstract void loader();
 		abstract void saver();
@@ -261,7 +495,7 @@ class PixMapFile
 
 	private
 	{
-		// set i/o mode (actual for windows system)
+		/// Set i/o mode for reading/writing Portable Anymap Images. Actual for OS Windows. For internal use.
 		auto IOMode(string mode)
 		{
 			
@@ -276,6 +510,7 @@ class PixMapFile
 		}
 	}
 
+	/// Basic file loading procedure
 	void load(string filename)
 	{
 		with (_file)
@@ -295,6 +530,7 @@ class PixMapFile
 		}
 	}
 	
+	/// Basic file saving procedure
 	void save(string filename)
 	{
 		with (_file)
@@ -307,7 +543,7 @@ class PixMapFile
 		}
 	}
 
-	// is raw format ?
+	/// Is raw format ?
 	final bool isBinaryFormat()
 	{
 		return 
@@ -318,7 +554,7 @@ class PixMapFile
 				);
 	}
 
-	// is text format ?
+	/// Is text format ?
 	final bool isTextFormat()
 	{
 		return 
@@ -329,22 +565,43 @@ class PixMapFile
 				);
 	}	
 
-	// get image
+	/// Get image object as PixMapImage object
 	final PixMapImage image() 
 	{ 
-		return _image; 
+		return this.getImage; 
 	}
 	
-	// set image
+	/// Set image object as PixMapImage object
 	final void image(PixMapImage image)
 	{
-		this._image = image;
+		this.setImage(image);
 	}
 
+	/// Convenient alias for working with PixMapFile same as PixMapImage
 	alias image this;
 }
 
-
+/**
+	A class that provides the ability to work with color images in P6 format. 
+	NB: The format is raw binary. 
+	
+	Note: 
+		This class supports indexing and assigning values ​​to specific pixels via 1D or 2D indexing, and provides P6 file loading/saving capabilities. 
+		According to the accepted convention, in the original description of the format inside the Netpbm package, the extension of these files should be `*.ppm`.
+		
+	Typical usage:
+    ----
+    auto img = new P6Image;  					// creating of empty image
+    img.load(`Lenna.ppm`);   					// load image from file `Lenna.ppm`
+    img[10, 10] = new RGBColor(255, 255, 255); 	// change pixel at coords (10; 10), now are white
+    img[10].writeln;							// get color of 11th pixel
+    img.save(`Lenna2.ppm`);						// save file as `Lenna2.ppm`
+    
+    auto img2 = new P6Image(10, 10, new RGBColor(255, 0, 255)); // creating image of 10x10, all pixels are red
+    img2[10] = img2[10] * 2; 									// increasing luminance by two
+    img2.save(`test.ppm`);										// save as `test.ppm`
+    ----
+*/
 class P6Image : PixMapFile
 {
 	mixin(addProperty!(int, "Intensity", "255"));
@@ -398,7 +655,27 @@ class P6Image : PixMapFile
 	}
 }
 
-
+/**
+	A class that provides the ability to work with color images in P3 format. 
+	NB: The format is raw text. 
+	
+	Note: 
+		This class supports indexing and assigning values ​​to specific pixels via 1D or 2D indexing, and provides P3 file loading/saving capabilities. 
+		According to the accepted convention, in the original description of the format inside the Netpbm package, the extension of these files should be `*.ppm`.
+		
+	Typical usage:
+    ----
+    auto img = new P3Image;  					// creating of empty image
+    img.load(`Lenna.ppm`);   					// load image from file `Lenna.ppm`
+    img[10, 10] = new RGBColor(255, 255, 255); 	// change pixel at coords (10; 10), now are white
+    img[10].writeln;							// get color of 11th pixel
+    img.save(`Lenna2.ppm`);						// save file as `Lenna2.ppm`
+    
+    auto img2 = new P3Image(10, 10, new RGBColor(255, 0, 255)); // creating image of 10x10, all pixels are red
+    img2[10] = img2[10] * 2; 									// increasing luminance by two
+    img2.save(`test.ppm`);										// save as `test.ppm`
+    ----
+*/
 class P3Image : PixMapFile
 {
 	mixin(addProperty!(int, "Intensity", "255"));
@@ -449,7 +726,27 @@ class P3Image : PixMapFile
      }
 }
 
-
+/**
+	A class that provides the ability to work with color images in P1 format. 
+	NB: The format is raw text. 
+	
+	Note: 
+		This class supports indexing and assigning values ​​to specific pixels via 1D or 2D indexing, and provides P1 file loading/saving capabilities. 
+		According to the accepted convention, in the original description of the format inside the Netpbm package, the extension of these files should be `*.pbm`.
+		
+	Typical usage:
+    ----
+    auto img = new P1Image;  					// creating of empty image
+    img.load(`Lenna.pbm`);   					// load image from file `Lenna.pbm`
+    img[10, 10] = new RGBColor(255, 255, 255); 	// change pixel at coords (10; 10), now are white
+    img[10].writeln;							// get color of 11th pixel
+    img.save(`Lenna2.pbm`);						// save file as `Lenna2.pbm`
+    
+    auto img2 = new P1Image(10, 10, new RGBColor(0, 0, 0)); // creating image of 10x10, all pixels are black
+    img2[10] = img2[10] * 2; 									// increasing luminance by two
+    img2.save(`test.pbm`);										// save as `test.pbm`
+    ----
+*/
 class P1Image : PixMapFile
 {
 	mixin addConstructor!(PixMapFormat.PBM_TEXT);
@@ -487,7 +784,27 @@ class P1Image : PixMapFile
 	}
 }
 
-
+/**
+	A class that provides the ability to work with color images in P2 format. 
+	NB: The format is raw text. 
+	
+	Note: 
+		This class supports indexing and assigning values ​​to specific pixels via 1D or 2D indexing, and provides P2 file loading/saving capabilities. 
+		According to the accepted convention, in the original description of the format inside the Netpbm package, the extension of these files should be `*.pgm`.
+		
+	Typical usage:
+    ----
+    auto img = new P2Image;  					// creating of empty image
+    img.load(`Lenna.pgm`);   					// load image from file `Lenna.pgm`
+    img[10, 10] = new RGBColor(255, 255, 255); 	// change pixel at coords (10; 10), now are white
+    img[10].writeln;							// get color of 11th pixel
+    img.save(`Lenna2.pgm`);						// save file as `Lenna2.pgm`
+    
+    auto img2 = new P2Image(10, 10, new RGBColor(0, 0, 0)); // creating image of 10x10, pixels are black
+    img2[10] = img2[10] * 2; 									// increasing luminance by two
+    img2.save(`test.pgm`);										// save as `test.pgm`
+    ----
+*/
 class P2Image : PixMapFile
 {
 	mixin(addProperty!(int, "Intensity", "255"));
@@ -545,6 +862,27 @@ class P2Image : PixMapFile
      }
 }
 
+/**
+	A class that provides the ability to work with color images in P5 format. 
+	NB: The format is raw binary. 
+	
+	Note: 
+		This class supports indexing and assigning values ​​to specific pixels via 1D or 2D indexing, and provides P5 file loading/saving capabilities. 
+		According to the accepted convention, in the original description of the format inside the Netpbm package, the extension of these files should be `*.pgm`.
+		
+	Typical usage:
+    ----
+    auto img = new P5Image;  					// creating of empty image
+    img.load(`Lenna.pgm`);   					// load image from file `Lenna.pgm`
+    img[10, 10] = new RGBColor(255, 255, 255); 	// change pixel at coords (10; 10), now are white
+    img[10].writeln;							// get color of 11th pixel
+    img.save(`Lenna2.pgm`);						// save file as `Lenna2.pgm`
+    
+    auto img2 = new P5Image(10, 10, new RGBColor(0, 0, 0)); // creating image of 10x10, all pixels are black
+    img2[10] = img2[10] * 2; 									// increasing luminance by two
+    img2.save(`test.pgm`);										// save as `test.pgm`
+    ----
+*/
 class P5Image : PixMapFile
 {
 	mixin(addProperty!(int, "Intensity", "255"));
@@ -589,7 +927,27 @@ class P5Image : PixMapFile
      }
 }
 
-
+/**
+	A class that provides the ability to work with color images in P4 format. 
+	NB: The format is raw binary. 
+	
+	Note: 
+		This class supports indexing and assigning values ​​to specific pixels via 1D or 2D indexing, and provides P4 file loading/saving capabilities. 
+		According to the accepted convention, in the original description of the format inside the Netpbm package, the extension of these files should be `*.pbm`.
+		
+	Typical usage:
+    ----
+    auto img = new P4Image;  					// creating of empty image
+    img.load(`Lenna.pbm`);   					// load image from file `Lenna.pbm`
+    img[10, 10] = new RGBColor(255, 255, 255); 	// change pixel at coords (10; 10), now are white
+    img[10].writeln;							// get color of 11th pixel
+    img.save(`Lenna2.pbm`);						// save file as `Lenna2.pbm`
+    
+    auto img2 = new P4Image(10, 10, new RGBColor(0, 0, 0)); // creating image of 10x10, all pixels are black
+    img2[10] = img2[10] * 2; 									// increasing luminance by two
+    img2.save(`test.pbm`);										// save as `test.pbm`
+    ----
+*/
 class P4Image : PixMapFile
 {
 	mixin addConstructor!(PixMapFormat.PBM_BINARY);
@@ -663,7 +1021,19 @@ class P4Image : PixMapFile
 	}
 }
 
+/**
+A constructor function that creates an image with the given length, width, and format. 
+By default, all parameters are 0, and the format is represented by the PixMapFormat.PPM_BINARY value, which corresponds to an image with a P6 format.
+Params:
+width = Width of image as size_t value. 
+height = Height of image as size_t value.
+pmFormat = Image format as enum PixMapFormat
 
+Typical usage:
+----
+auto img = image(20, 20, PixMapFormat.PPM_TEXT); 	// creates image with P3 format type
+----
+*/
 PixMapFile image(size_t width = 0, size_t height = 0, PixMapFormat pmFormat = PixMapFormat.PPM_BINARY)
 {
 	PixMapFile pixmap;
@@ -693,6 +1063,19 @@ PixMapFile image(size_t width = 0, size_t height = 0, PixMapFormat pmFormat = Pi
 	return pixmap;
 }
 
+/**
+A constructor function that creates an image with the given length, width, and format. 
+By default, all parameters are 0, and the format is represented by the "P6" value, which corresponds to an image with a P6 format.
+Params:
+width = Width of image as size_t value. 
+height = Height of image as size_t value.
+pmFormat = Image format as string
+
+Typical usage:
+----
+auto img = image(20, 20, "P3"); 	// creates image with P3 format type
+----
+*/
 PixMapFile image(size_t width = 0, size_t height = 0, string pmFormat = "P6")
 {
 	PixMapFile pixmap;
