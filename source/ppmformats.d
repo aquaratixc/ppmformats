@@ -88,9 +88,14 @@ class RGBColor
     
     Typical usage:
     ----
-    RGBColor color = new RGBColor; 					// Black color
-    RGBColor color = new RGBColor(255, 0, 0);   	// Red color
-    RGBColor color = new RGBColor(255, 255, 255);   // White color
+    // Black color
+    RGBColor color = new RGBColor;
+    
+    // Red color	
+    RGBColor color = new RGBColor(255, 0, 0);
+    
+    // White color
+    RGBColor color = new RGBColor(255, 255, 255); 
     ----
     */
 	this(int R = 0, int G = 0, int B = 0)
@@ -109,7 +114,8 @@ class RGBColor
     ----
     import std.stdio : writeln;
     
-    RGBColor color = new RGBColor(255, 0, 0);   	// Red color
+    // Red color
+    RGBColor color = new RGBColor(255, 0, 0); 
 	color.luminance709.writeln;
     ----
     */
@@ -127,7 +133,8 @@ class RGBColor
     ----
     import std.stdio : writeln;
     
-    RGBColor color = new RGBColor(255, 0, 0);   	// Red color
+    // Red color
+    RGBColor color = new RGBColor(255, 0, 0); 
 	color.luminance601.writeln;
     ----
     */
@@ -145,7 +152,8 @@ class RGBColor
     ----
     import std.stdio : writeln;
     
-    RGBColor color = new RGBColor(255, 0, 0);   	// Red color
+    // Red color
+    RGBColor color = new RGBColor(255, 0, 0); 
 	color.luminanceAverage.writeln;
     ----
     */
@@ -167,7 +175,8 @@ class RGBColor
     ----
     import std.stdio : writeln;
     
-    RGBColor color = new RGBColor(255, 0, 0);   	// Red color
+    // Red color
+    RGBColor color = new RGBColor(255, 0, 0); 
 	color.writeln;
     ----
     */
@@ -181,10 +190,13 @@ class RGBColor
     
     Typical usage:
     ----
-    RGBColor color = new RGBColor(255, 0, 0);   	// Red color
-	
-	auto newColor = color + 2;						// Add two for all channels in color
-	color = color / 2;								// Divide all channels by two
+    // Red color
+    RGBColor color = new RGBColor(255, 0, 0);
+       	
+	// Add two for all channels in color
+	auto newColor = color + 2;	
+	// Divide all channels by two					
+	color = color / 2;								
     ----
     */
 	RGBColor opBinary(string op, T)(auto ref T rhs)
@@ -206,8 +218,10 @@ class RGBColor
     
     Typical usage:
     ----
-    RGBColor color  = new RGBColor(255, 0, 0);   	// Red color
-	RGBColor color2 = new RGBColor(0, 0, 255); 		// Blue color
+    // Red color
+    RGBColor color  = new RGBColor(255, 0, 0);
+    // Blue color  	
+	RGBColor color2 = new RGBColor(0, 0, 255); 		
 	
 	// mix two colors
 	auto mix = color + color2;
@@ -282,9 +296,14 @@ class PixMapImage
     
     Typical usage:
     ----
-    PixMapImage pmi = new PixMapImage;  									// creating of empty image
-    PixMapImage pmi2 = new PixMapImage(20, 20);								// creating image of size 20x20, all pixels are black
-    PixMapImage pmi3 = new PixMapImage(20, 20, new RGBColor(255, 0, 255));	// creating image of size 20x20, all pixels are red
+    // creating of empty image
+    PixMapImage pmi = new PixMapImage;  									
+    
+    // creating image of size 20x20, all pixels are black
+    PixMapImage pmi2 = new PixMapImage(20, 20);								
+    
+    // creating image of size 20x20, all pixels are red
+    PixMapImage pmi3 = new PixMapImage(20, 20, new RGBColor(255, 0, 255));	
     ----
     */	
 	this(size_t width = 0, size_t height = 0, RGBColor color = new RGBColor(0, 0, 0))
@@ -307,8 +326,10 @@ class PixMapImage
     
     Typical usage:
     ----
-    auto pmi = new PixMapImage(20, 20);   // creating image of size 20x20, all pixels are black
-    pmi[5, 5] = new RGBColor(0, 255, 0);  // pixel at coords (5;5) now are green
+    // creating image of size 20x20, all pixels are black
+    auto pmi = new PixMapImage(20, 20);   
+    // pixel at coords (5;5) now are green
+    pmi[5, 5] = new RGBColor(0, 255, 0);  
     ----
 	*/	
 	RGBColor opIndexAssign(RGBColor color, size_t x, size_t y)
@@ -323,8 +344,10 @@ class PixMapImage
     
     Typical usage:
     ----
-    auto pmi = new PixMapImage(20, 20);   // creating image of size 20x20, all pixels are black
-    pmi[5] = new RGBColor(0, 255, 0);  	  // 6th pixel now are green
+    // creating image of size 20x20, all pixels are black
+    auto pmi = new PixMapImage(20, 20);   
+    // 6th pixel now are green
+    pmi[5] = new RGBColor(0, 255, 0);  	  
     ----
 	*/	
 	RGBColor opIndexAssign(RGBColor color, size_t x)
@@ -339,8 +362,10 @@ class PixMapImage
     
     Typical usage:
     ----
-    auto pmi = new PixMapImage(20, 20);   // creating image of size 20x20, all pixels are black
-    pmi[5, 5].writeln;  				  // get pixel color at coords (5;5)
+    // creating image of size 20x20, all pixels are black
+    auto pmi = new PixMapImage(20, 20);   
+    // get pixel color at coords (5;5)
+    pmi[5, 5].writeln;  				  
     ----
 	*/	
 	RGBColor opIndex(size_t x, size_t y)
@@ -354,8 +379,10 @@ class PixMapImage
     
     Typical usage:
     ----
-    auto pmi = new PixMapImage(20, 20);   // creating image of size 20x20, all pixels are black
-    pmi[5].writeln;  	  				  // getting color of 6th pixel
+    // creating image of size 20x20, all pixels are black
+    auto pmi = new PixMapImage(20, 20);   
+    // getting color of 6th pixel
+    pmi[5].writeln;  	  				  
     ----
 	*/	
 	RGBColor opIndex(size_t x)
@@ -396,7 +423,8 @@ class PixMapImage
     Typical usage:
     ----
     PixMapImage pmi = new PixMapFile(10, 10);
-	RGBColor[] pixels = pmi.array;	// get all pixels 
+    // get all pixels 
+	RGBColor[] pixels = pmi.array;	
     ----
     */
 	final RGBColor[] array()
@@ -414,7 +442,8 @@ class PixMapImage
     ----
     PixMapImage pmi = new PixMapFile(2);
 	RGBColor[] pixels = [new RGBColor(255, 255, 255), new RGBColor(255, 255, 255)];
-	pmi.array(pixels);	// set all pixels as white
+	// set all pixels as white
+	pmi.array(pixels);	
     ----
     */
 	final void array(RGBColor[] image)
@@ -591,15 +620,23 @@ class PixMapFile
 		
 	Typical usage:
     ----
-    auto img = new P6Image;  					// creating of empty image
-    img.load(`Lenna.ppm`);   					// load image from file `Lenna.ppm`
-    img[10, 10] = new RGBColor(255, 255, 255); 	// change pixel at coords (10; 10), now are white
-    img[10].writeln;							// get color of 11th pixel
-    img.save(`Lenna2.ppm`);						// save file as `Lenna2.ppm`
+    // creating of empty image
+    auto img = new P6Image;  					
+    // load image from file `Lenna.ppm`
+    img.load(`Lenna.ppm`);   					
+    // change pixel at coords (10; 10), now are white
+    img[10, 10] = new RGBColor(255, 255, 255); 	
+    // get color of 11th pixel
+    img[10].writeln;							
+    // save file as `Lenna2.ppm`
+    img.save(`Lenna2.ppm`);						
     
-    auto img2 = new P6Image(10, 10, new RGBColor(255, 0, 255)); // creating image of 10x10, all pixels are red
-    img2[10] = img2[10] * 2; 									// increasing luminance by two
-    img2.save(`test.ppm`);										// save as `test.ppm`
+    // creating image of 10x10, all pixels are red
+    auto img2 = new P6Image(10, 10, new RGBColor(255, 0, 255)); 
+    // increasing luminance by two
+    img2[10] = img2[10] * 2; 									
+    // save as `test.ppm`
+    img2.save(`test.ppm`);										
     ----
 */
 class P6Image : PixMapFile
@@ -665,15 +702,23 @@ class P6Image : PixMapFile
 		
 	Typical usage:
     ----
-    auto img = new P3Image;  					// creating of empty image
-    img.load(`Lenna.ppm`);   					// load image from file `Lenna.ppm`
-    img[10, 10] = new RGBColor(255, 255, 255); 	// change pixel at coords (10; 10), now are white
-    img[10].writeln;							// get color of 11th pixel
-    img.save(`Lenna2.ppm`);						// save file as `Lenna2.ppm`
+    // creating of empty image
+    auto img = new P3Image;  					
+    // load image from file `Lenna.ppm`
+    img.load(`Lenna.ppm`);   					
+    // change pixel at coords (10; 10), now are white
+    img[10, 10] = new RGBColor(255, 255, 255); 	
+    // get color of 11th pixel
+    img[10].writeln;							
+    // save file as `Lenna2.ppm`
+    img.save(`Lenna2.ppm`);						
     
-    auto img2 = new P3Image(10, 10, new RGBColor(255, 0, 255)); // creating image of 10x10, all pixels are red
-    img2[10] = img2[10] * 2; 									// increasing luminance by two
-    img2.save(`test.ppm`);										// save as `test.ppm`
+    // creating image of 10x10, all pixels are red
+    auto img2 = new P3Image(10, 10, new RGBColor(255, 0, 255)); 
+    // increasing luminance by two
+    img2[10] = img2[10] * 2; 									
+    // save as `test.ppm`
+    img2.save(`test.ppm`);										
     ----
 */
 class P3Image : PixMapFile
@@ -736,15 +781,23 @@ class P3Image : PixMapFile
 		
 	Typical usage:
     ----
-    auto img = new P1Image;  					// creating of empty image
-    img.load(`Lenna.pbm`);   					// load image from file `Lenna.pbm`
-    img[10, 10] = new RGBColor(255, 255, 255); 	// change pixel at coords (10; 10), now are white
-    img[10].writeln;							// get color of 11th pixel
-    img.save(`Lenna2.pbm`);						// save file as `Lenna2.pbm`
+    // creating of empty image
+    auto img = new P1Image;  					
+    // load image from file `Lenna.pbm`
+    img.load(`Lenna.pbm`);   					
+    // change pixel at coords (10; 10), now are white
+    img[10, 10] = new RGBColor(255, 255, 255); 	
+    // get color of 11th pixel
+    img[10].writeln;							
+    // save file as `Lenna2.pbm`
+    mg.save(`Lenna2.pbm`);						
     
-    auto img2 = new P1Image(10, 10, new RGBColor(0, 0, 0)); // creating image of 10x10, all pixels are black
-    img2[10] = img2[10] * 2; 									// increasing luminance by two
-    img2.save(`test.pbm`);										// save as `test.pbm`
+    // creating image of 10x10, all pixels are black
+    auto img2 = new P1Image(10, 10, new RGBColor(0, 0, 0)); 
+    // increasing luminance by two
+    img2[10] = img2[10] * 2; 									
+    // save as `test.pbm`
+    img2.save(`test.pbm`);										
     ----
 */
 class P1Image : PixMapFile
@@ -794,15 +847,23 @@ class P1Image : PixMapFile
 		
 	Typical usage:
     ----
-    auto img = new P2Image;  					// creating of empty image
-    img.load(`Lenna.pgm`);   					// load image from file `Lenna.pgm`
-    img[10, 10] = new RGBColor(255, 255, 255); 	// change pixel at coords (10; 10), now are white
-    img[10].writeln;							// get color of 11th pixel
-    img.save(`Lenna2.pgm`);						// save file as `Lenna2.pgm`
+    // creating of empty image
+    auto img = new P2Image;  					
+    // load image from file `Lenna.pgm`
+    img.load(`Lenna.pgm`);   					
+    // change pixel at coords (10; 10), now are white
+    img[10, 10] = new RGBColor(255, 255, 255); 	
+    // get color of 11th pixel
+    img[10].writeln;							
+    // save file as `Lenna2.pgm`
+    img.save(`Lenna2.pgm`);						
     
-    auto img2 = new P2Image(10, 10, new RGBColor(0, 0, 0)); // creating image of 10x10, pixels are black
-    img2[10] = img2[10] * 2; 									// increasing luminance by two
-    img2.save(`test.pgm`);										// save as `test.pgm`
+    // creating image of 10x10, pixels are black
+    auto img2 = new P2Image(10, 10, new RGBColor(0, 0, 0)); 
+    // increasing luminance by two
+    img2[10] = img2[10] * 2; 									
+    // save as `test.pgm`
+    img2.save(`test.pgm`);										
     ----
 */
 class P2Image : PixMapFile
@@ -872,15 +933,23 @@ class P2Image : PixMapFile
 		
 	Typical usage:
     ----
-    auto img = new P5Image;  					// creating of empty image
-    img.load(`Lenna.pgm`);   					// load image from file `Lenna.pgm`
-    img[10, 10] = new RGBColor(255, 255, 255); 	// change pixel at coords (10; 10), now are white
-    img[10].writeln;							// get color of 11th pixel
-    img.save(`Lenna2.pgm`);						// save file as `Lenna2.pgm`
+    // create empty image
+    auto img = new P5Image;
+    // load from file  					
+    img.load(`Lenna.pgm`);   					
+    // set pixel at (10;10) to white color
+    img[10, 10] = new RGBColor(255, 255, 255);
+    // get color of 11th pixel 	
+    img[10].writeln;							
+    // save to file
+    img.save(`Lenna2.pgm`);						
     
-    auto img2 = new P5Image(10, 10, new RGBColor(0, 0, 0)); // creating image of 10x10, all pixels are black
-    img2[10] = img2[10] * 2; 									// increasing luminance by two
-    img2.save(`test.pgm`);										// save as `test.pgm`
+    // creating image of size 10x10, all pixels black
+    auto img2 = new P5Image(10, 10, new RGBColor(0, 0, 0)); 
+    // increase luminance twice
+    img2[10] = img2[10] * 2;
+    // save as pgm file 									
+    img2.save(`test.pgm`);										
     ----
 */
 class P5Image : PixMapFile
@@ -937,15 +1006,23 @@ class P5Image : PixMapFile
 		
 	Typical usage:
     ----
-    auto img = new P4Image;  					// creating of empty image
-    img.load(`Lenna.pbm`);   					// load image from file `Lenna.pbm`
-    img[10, 10] = new RGBColor(255, 255, 255); 	// change pixel at coords (10; 10), now are white
-    img[10].writeln;							// get color of 11th pixel
-    img.save(`Lenna2.pbm`);						// save file as `Lenna2.pbm`
+    // create empty P4 image
+    auto img = new P4Image; 
+    // load from file 					
+    img.load(`Lenna.pbm`);   					
+    // set pixel at (10; 10) as white
+    img[10, 10] = new RGBColor(255, 255, 255); 	
+    // get 11th pixel
+    img[10].writeln;							
+    // save to file
+    img.save(`Lenna2.pbm`);						
     
-    auto img2 = new P4Image(10, 10, new RGBColor(0, 0, 0)); // creating image of 10x10, all pixels are black
-    img2[10] = img2[10] * 2; 									// increasing luminance by two
-    img2.save(`test.pbm`);										// save as `test.pbm`
+    // new P4 image, size is 10x10, all pixels black
+    auto img2 = new P4Image(10, 10, new RGBColor(0, 0, 0)); 
+    // increase two times
+    img2[10] = img2[10] * 2; 									
+    // save as pbm file
+    img2.save(`test.pbm`);										
     ----
 */
 class P4Image : PixMapFile
