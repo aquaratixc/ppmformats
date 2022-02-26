@@ -1111,7 +1111,7 @@ enum BYTE_ORDER
 
 
 /**
-	A class that provides the ability to work with color images in PF (portable floatmpa image) format. 
+	A class that provides the ability to work with color images in PF (portable floatmap image) format. 
 	NB: The format is raw binary. Support of this format is EXPERIMENTAL (!!!).
 	
 	Note: 
