@@ -500,6 +500,7 @@ enum PixMapFormat : string
 	PGM_BINARY	=	"P5",
 	PPM_TEXT	=	"P3",
 	PPM_BINARY	= 	"P6",
+	PF_RGB_BINARY = "PF",
 }
 
 /**
@@ -579,7 +580,8 @@ class PixMapFile
 				( 
 				  (_header == PixMapFormat.PBM_BINARY) |
 				  (_header == PixMapFormat.PGM_BINARY) |
-				  (_header == PixMapFormat.PPM_BINARY)
+				  (_header == PixMapFormat.PPM_BINARY) |
+				  (_header == PixMapFormat.PF_RGB_BINARY)
 				);
 	}
 
@@ -1098,6 +1100,176 @@ class P4Image : PixMapFile
 	}
 }
 
+/// Endianess (i.e byte-order)
+enum BYTE_ORDER
+{
+	/// Little-endian byte-order
+	LITTLE_ENDIAN,
+	/// Big-endian byte-order
+	BIG_ENDIAN
+}
+
+
+/**
+	A class that provides the ability to work with color images in PF (portable floatmpa image) format. 
+	NB: The format is raw binary. Support of this format is EXPERIMENTAL (!!!).
+	
+	Note: 
+		This class supports indexing and assigning values ​​to specific pixels via 1D or 2D indexing, and provides PF file loading/saving capabilities. 
+		According to the accepted convention, in the original description of the format inside the Netpbm package, the extension of these files should be `*.pfm`.
+		
+	Typical usage:
+    ----
+    // create empty PF image
+    auto img = new PFImage; 
+    // load from file 					
+    img.load(`Lenna.pfm`);   					
+    // set pixel at (10; 10) as white
+    img[10, 10] = new RGBColor(255, 255, 255); 	
+    // get 11th pixel
+    img[10].writeln;							
+    // save to file
+    img.save(`Lenna2.pfm`);						
+    
+    // new PF image, size is 10x10, all pixels black
+    auto img2 = new PFImage(10, 10, new RGBColor(0, 0, 0)); 
+    // increase two times
+    img2[10] = img2[10] * 2; 
+    // select byte order for saving (by default, little-endian, i.e BYTE_ORDER.LITTLE_ENDIAN)
+    img2.setOrder(BYTE_ORDER.BIG_ENDIAN);									
+    // save as pfm file
+    img2.save(`test.pfm`);										
+    ----
+*/
+class PFImage : PixMapFile
+{
+	mixin(addProperty!(uint, "Intensity", "255"));
+	mixin(addProperty!(uint, "Order", "BYTE_ORDER.LITTLE_ENDIAN"));
+	
+	mixin addConstructor!(PixMapFormat.PF_RGB_BINARY);
+	
+	private 
+	{
+		/// reconstruct unsigned integer value from unsigned bytes (little-endian order)
+		static uint fromLEBytes(ubyte[] bytes)
+		{
+			return ((bytes[3] << 24) | (bytes[2] << 16) | (bytes[1] << 8) | bytes[0]);
+		}
+		
+		/// reconstruct unsigned integer value from unsigned bytes (big-endian order)
+		static uint fromBEBytes(ubyte[] bytes)
+		{
+			return ((bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3]);
+		}
+		
+		static ubyte[] toBEBytes(uint value)
+		{
+			ubyte[] bytes;
+			
+			bytes ~= (value & 0xff000000) >> 24;
+			bytes ~= (value & 0x00ff0000) >> 16;
+			bytes ~= (value & 0x0000ff00) >> 8;
+			bytes ~= (value & 0x000000ff);
+			
+			return bytes;
+		}
+		
+		static ubyte[] toLEBytes(uint value)
+		{
+			ubyte[] bytes;
+		
+			bytes ~= (value & 0x000000ff);
+			bytes ~= (value & 0x0000ff00) >> 8;
+			bytes ~= (value & 0x00ff0000) >> 16;
+			bytes ~= (value & 0xff000000) >> 24;
+			
+			return bytes;
+		}
+	}
+	
+	override void loader()
+	{
+		auto data = _file.readln;
+		auto ef = data.parse!float;
+		
+		uint function(ubyte[]) byteLoader;
+		
+		if (ef < 0)
+		{
+			_order = BYTE_ORDER.LITTLE_ENDIAN;
+			byteLoader = &fromLEBytes;
+		}
+		else
+		{
+			_order = BYTE_ORDER.BIG_ENDIAN;
+			byteLoader = &fromBEBytes;
+		}
+		
+		float bytes2float(ubyte[] bytes)
+		{
+			uint tmp = byteLoader(bytes);
+			float value = *(cast(float*) &tmp);
+			return value;
+		}
+		
+		auto blockSize = 3 * float.sizeof;
+		auto buffer = new ubyte[_width * blockSize];
+	
+		foreach (i; 0.._height)
+		{
+			_file.rawRead!ubyte(buffer);
+			
+			foreach (j; 0.._width)
+			{
+				auto wq = buffer[(j * blockSize)..(j * blockSize + blockSize)];
+				
+				_image[j, _height - i] = new RGBColor(
+					cast(int) (_intensity * bytes2float(wq[0..4])),
+					cast(int) (_intensity * bytes2float(wq[4..8])),
+					cast(int) (_intensity * bytes2float(wq[8..12]))
+				);
+			}
+		}
+	}
+	
+	override void saver()
+	{
+		ubyte[] function(uint) byteSaver;
+		
+		final switch (_order) with (BYTE_ORDER) {
+			case LITTLE_ENDIAN:
+				_file.writeln(-1.0);
+				byteSaver = &toLEBytes;
+				break;
+			case BIG_ENDIAN:
+				_file.writeln(1.0);
+				byteSaver = &toBEBytes;
+				break;
+		}
+		
+		ubyte[] int2bytes(int value)
+		{
+			float I = float(value) / float(_intensity);
+			uint tmp = *(cast(uint*) &I);
+			return byteSaver(tmp);
+		}
+		
+		foreach (i; 0.._height)
+		{
+			foreach (j; 0.._width)
+			{
+				auto color = _image[j, _height - i];
+				
+				_file.write(
+					cast(char[]) int2bytes(color.getR),
+					cast(char[]) int2bytes(color.getG),
+					cast(char[]) int2bytes(color.getB)
+				);
+			}
+		}
+	}
+}
+
 /**
 A constructor function that creates an image with the given length, width, and format. 
 By default, all parameters are 0, and the format is represented by the PixMapFormat.PPM_BINARY value, which corresponds to an image with a P6 format.
@@ -1134,6 +1306,9 @@ PixMapFile image(size_t width = 0, size_t height = 0, PixMapFormat pmFormat = Pi
 			break;
 		case PPM_BINARY:
 			pixmap = new P6Image(width, height);
+			break;
+		case PF_RGB_BINARY:
+			pixmap = new PFImage(width, height);
 			break;
 	}
 
@@ -1176,6 +1351,9 @@ PixMapFile image(size_t width = 0, size_t height = 0, string pmFormat = "P6")
 			break;
 		case "P6":
 			pixmap = new P6Image(width, height);
+			break;
+		case "PF":
+			pixmap = new PFImage(width, height);
 			break;
 		default:
 			assert(0);
